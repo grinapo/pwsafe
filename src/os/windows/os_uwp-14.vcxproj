@@ -99,21 +99,39 @@
   <PropertyGroup />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <GenerateManifest>false</GenerateManifest>
+    <OutDir>$(SolutionDir)build\uwp\lib\$(Platform)\$(Configuration)\os\</OutDir>
+    <IntDir>$(SolutionDir)build\uwp\obj\$(Platform)\$(Configuration)\os\</IntDir>
+    <TargetName>os</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <GenerateManifest>false</GenerateManifest>
+    <OutDir>$(SolutionDir)build\uwp\lib\$(Platform)\$(Configuration)\os\</OutDir>
+    <IntDir>$(SolutionDir)build\uwp\obj\$(Platform)\$(Configuration)\os\</IntDir>
+    <TargetName>os</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
     <GenerateManifest>false</GenerateManifest>
+    <OutDir>$(SolutionDir)build\uwp\lib\$(Platform)\$(Configuration)\os\</OutDir>
+    <IntDir>$(SolutionDir)build\uwp\obj\$(Platform)\$(Configuration)\os\</IntDir>
+    <TargetName>os</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
     <GenerateManifest>false</GenerateManifest>
+    <OutDir>$(SolutionDir)build\uwp\lib\$(Platform)\$(Configuration)\os\</OutDir>
+    <IntDir>$(SolutionDir)build\uwp\obj\$(Platform)\$(Configuration)\os\</IntDir>
+    <TargetName>os</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <GenerateManifest>false</GenerateManifest>
+    <OutDir>$(SolutionDir)build\uwp\lib\$(Platform)\$(Configuration)\os\</OutDir>
+    <IntDir>$(SolutionDir)build\uwp\obj\$(Platform)\$(Configuration)\os\</IntDir>
+    <TargetName>os</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <GenerateManifest>false</GenerateManifest>
+    <OutDir>$(SolutionDir)build\uwp\lib\$(Platform)\$(Configuration)\os\</OutDir>
+    <IntDir>$(SolutionDir)build\uwp\obj\$(Platform)\$(Configuration)\os\</IntDir>
+    <TargetName>os</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
