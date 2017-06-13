@@ -12,7 +12,7 @@
 #include "UTF8Conv.h"
 #include "Util.h"
 
-#include "os/debug.h"
+//#include "os/debug.h"
 #include "os/utf8conv.h"
 
 CUTF8Conv::~CUTF8Conv()
@@ -96,7 +96,7 @@ bool CUTF8Conv::FromUTF8(const unsigned char *utf8, size_t utf8Len,
     // it seems that this always returns non-zero, even if encoding
     // broken. Therefore, we'll give a conservative value here,
     // and try to recover later
-    pws_os::Trace0(_T("FromUTF8: Couldn't get buffer size - guessing!"));
+    //pws_os::Trace0(_T("FromUTF8: Couldn't get buffer size - guessing!"));
     wcLen = sizeof(StringX::value_type) * (utf8Len + 1);
   }
   // Allocate buffer (if previous allocation was smaller)
@@ -116,23 +116,23 @@ bool CUTF8Conv::FromUTF8(const unsigned char *utf8, size_t utf8Len,
     DWORD errCode = GetLastError();
     switch (errCode) {
     case ERROR_INSUFFICIENT_BUFFER:
-      pws_os::Trace0(_T("INSUFFICIENT BUFFER")); break;
+      /*pws_os::Trace0(_T("INSUFFICIENT BUFFER"));*/ break;
     case ERROR_INVALID_FLAGS:
-      pws_os::Trace0(_T("INVALID FLAGS")); break;
+      /*pws_os::Trace0(_T("INVALID FLAGS"));*/ break;
     case ERROR_INVALID_PARAMETER:
-      pws_os::Trace0(_T("INVALID PARAMETER")); break;
+      /*pws_os::Trace0(_T("INVALID PARAMETER"));*/ break;
     case ERROR_NO_UNICODE_TRANSLATION:
       // try to recover
-      pws_os::Trace0(_T("NO UNICODE TRANSLATION"));
+      /*pws_os::Trace0(_T("NO UNICODE TRANSLATION"));*/
       wcLen = MultiByteToWideChar(CP_ACP,        // code page
                                   0,             // character-type options
                                   LPSTR(utf8),   // string to map
                                   -1,            // -1 means null-terminated
                                   m_wc,          // output buffer
                                   reinterpret_cast<int &>(wcLen));  // output buffer size
-      if (wcLen > 0) {
-        pws_os::Trace0(_T("FromUTF8: recovery succeeded!"));
-      }
+      //if (wcLen > 0) {
+        //pws_os::Trace0(_T("FromUTF8: recovery succeeded!"));
+      //}
       break;
     default:
       ASSERT(0);

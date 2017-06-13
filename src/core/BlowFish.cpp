@@ -11,7 +11,7 @@
 #include "BlowFish.h"
 #include "sha1.h"
 #include "PwsPlatform.h"
-#include "os/mem.h"
+//#include "os/mem.h"
 #include "Util.h" // for trashMemory
 
 union aword
@@ -457,7 +457,7 @@ BlowFish *BlowFish::MakeBlowFish(const unsigned char *pass, int passlen,
                                  const unsigned char *salt, int saltlen)
 {
   unsigned char passkey[SHA1::HASHLEN];
-  pws_os::mlock(passkey, sizeof(passkey));
+  //pws_os::mlock(passkey, sizeof(passkey));
 
   SHA1 context;
   context.Update(pass, passlen);
@@ -466,7 +466,7 @@ BlowFish *BlowFish::MakeBlowFish(const unsigned char *pass, int passlen,
 
   BlowFish *retval = new BlowFish(passkey, sizeof(passkey));
   trashMemory(passkey, sizeof(passkey));
-  pws_os::munlock(passkey, sizeof(passkey));
+  //pws_os::munlock(passkey, sizeof(passkey));
   return retval;
 }
 

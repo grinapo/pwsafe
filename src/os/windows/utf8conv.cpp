@@ -12,7 +12,6 @@
 
 #include "../typedefs.h"
 #include "../utf8conv.h"
-#include "../debug.h"
 
 #include <locale.h>
 
@@ -40,19 +39,19 @@ size_t pws_os::wcstombs(char *dst, size_t maxdstlen,
                                       src, (int)srclen, dst, (int)maxdstlen,
                                       NULL, NULL));
   if (retval == 0) {
-    pws_os::Trace0(_T("WideCharToMultiByte failed: "));
+    //pws_os::Trace0(_T("WideCharToMultiByte failed: "));
     switch (GetLastError()) {
     case ERROR_INSUFFICIENT_BUFFER:
-      pws_os::Trace0(_T("ERROR_INSUFFICIENT_BUFFER\n"));
+      //pws_os::Trace0(_T("ERROR_INSUFFICIENT_BUFFER\n"));
       break;
     case ERROR_INVALID_FLAGS:
-      pws_os::Trace0(_T("ERROR_INVALID_FLAGS\n"));
+      //pws_os::Trace0(_T("ERROR_INVALID_FLAGS\n"));
       break;
     case ERROR_INVALID_PARAMETER:
-      pws_os::Trace0(_T("ERROR_INVALID_PARAMETER\n"));
+      //pws_os::Trace0(_T("ERROR_INVALID_PARAMETER\n"));
       break;
-    default:
-      pws_os::Trace(_T("Unexpected code %lx\n"), GetLastError());
+    //default:
+      //pws_os::Trace(_T("Unexpected code %lx\n"), GetLastError());
     }
   }
   return retval;

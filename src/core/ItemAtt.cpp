@@ -13,15 +13,15 @@
 #include "TwoFish.h"
 #include "PWSrand.h"
 #include "PWSfile.h"
-#include "PWSfileV4.h"
+//#include "PWSfileV4.h"
 #include "PWScore.h"
 
 #include "os/typedefs.h"
-#include "os/pws_tchar.h"
+//#include "os/pws_tchar.h"
 #include "os/file.h"
-#include "os/media.h"
+//#include "os/media.h"
 #include "os/utf8conv.h"
-#include "os/dir.h"
+//#include "os/dir.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -92,7 +92,7 @@ void CItemAtt::GetUUID(uuid_array_t &uuid_array) const
                     static_cast<unsigned char *>(uuid_array), length);
   } else {
     ASSERT(0);
-    pws_os::Trace(_T("CItemAtt::GetUUID(uuid_array_t) - no UUID found!\n"));
+    //pws_os::Trace(_T("CItemAtt::GetUUID(uuid_array_t) - no UUID found!\n"));
     memset(uuid_array, 0, length);
   }
 }
@@ -161,105 +161,105 @@ bool CItemAtt::GetContent(unsigned char *content, size_t csize) const
   return true;
 }
 
-int CItemAtt::Import(const stringT &fname)
-{
-  stringT spath, sdrive, sdir, sfname, sextn;
-  time_t atime(0), ctime(0), mtime(0);
-  int status = PWScore::SUCCESS;
-
-  ASSERT(!fname.empty());
-  if (!pws_os::FileExists(fname))
-    return PWScore::CANT_OPEN_FILE;
-
-  std::FILE *fhandle = pws_os::FOpen(fname, L"rb");
-  if (!fhandle)
-    return PWScore::CANT_OPEN_FILE;
-
-  size_t flen = static_cast<size_t>(pws_os::fileLength(fhandle));
-  unsigned char *data = new unsigned char[flen];
-  if (data == NULL)
-    return PWScore::FAILURE;
-
-  size_t nread = fread(data, flen, 1, fhandle);
-  if (nread != 1) {
-    fclose(fhandle);
-    status = PWScore::READ_FAIL;
-    goto done;
-  }
-
-  if (fclose(fhandle) != 0) {
-    status = PWScore::READ_FAIL;
-    goto done;
-  }
-
-  SetField(CONTENT, data, flen);
-
-  // derive the file's path and name
-  pws_os::splitpath(fname, sdrive, sdir, sfname, sextn);
-  spath = pws_os::makepath(sdrive, sdir, _T(""), _T(""));
-
-  CItem::SetField(FILENAME, (sfname + sextn).c_str());
-  CItem::SetField(FILEPATH, spath.c_str());
-  CItem::SetField(MEDIATYPE, pws_os::GetMediaType(fname.c_str()).c_str());
-
-  if (pws_os::GetFileTimes(fname, ctime, mtime, atime)) {
-    unsigned char buf[sizeof(time_t)];
-    putInt(buf, ctime);
-    CItem::SetField(FILECTIME, buf, sizeof(buf));
-    putInt(buf, mtime);
-    CItem::SetField(FILEMTIME, buf, sizeof(buf));
-    putInt(buf, atime);
-    CItem::SetField(FILEATIME, buf, sizeof(buf));
-  } else {
-    ASSERT(0);
-    goto done;
-  }
-
- done:
-  trashMemory(data, flen);
-  delete[] data;
-  return status;
-}
-
-int CItemAtt::Export(const stringT &fname) const
-{
-  int status = PWScore::SUCCESS;
-
-  ASSERT(!fname.empty());
-  ASSERT(IsFieldSet(CONTENT));
-  // fail safely @runtime:
-  if (!IsFieldSet(CONTENT))
-    return PWScore::FAILURE;
-
-  const CItemField &field = m_fields.find(CONTENT)->second;
-  std::FILE *fhandle = pws_os::FOpen(fname, L"wb");
-  if (!fhandle)
-    return PWScore::CANT_OPEN_FILE;
-
-  size_t flen = field.GetLength() + 8; // Add 8 for block size
-  unsigned char *value = new unsigned char[flen];
-  if (value == NULL) {
-    fclose(fhandle);
-    return PWScore::FAILURE;
-  }
-
-  CItem::GetField(field, value, flen); // flen adjusted to real value
-  size_t nwritten = fwrite(value, flen, 1, fhandle);
-  if (nwritten != 1) {
-    status = PWScore::WRITE_FAIL;
-    goto done;
-  }
-
-  if (fclose(fhandle) != 0) {
-    status = PWScore::WRITE_FAIL;
-    goto done;
-  }
-
- done:
-  trashMemory(value, flen);
-  delete[] value;
-  return status;
-}
+//int CItemAtt::Import(const stringT &fname)
+//{
+//  stringT spath, sdrive, sdir, sfname, sextn;
+//  time_t atime(0), ctime(0), mtime(0);
+//  int status = PWScore::SUCCESS;
+//
+//  ASSERT(!fname.empty());
+//  if (!pws_os::FileExists(fname))
+//    return PWScore::CANT_OPEN_FILE;
+//
+//  std::FILE *fhandle = pws_os::FOpen(fname, L"rb");
+//  if (!fhandle)
+//    return PWScore::CANT_OPEN_FILE;
+//
+//  size_t flen = static_cast<size_t>(pws_os::fileLength(fhandle));
+//  unsigned char *data = new unsigned char[flen];
+//  if (data == NULL)
+//    return PWScore::FAILURE;
+//
+//  size_t nread = fread(data, flen, 1, fhandle);
+//  if (nread != 1) {
+//    fclose(fhandle);
+//    status = PWScore::READ_FAIL;
+//    goto done;
+//  }
+//
+//  if (fclose(fhandle) != 0) {
+//    status = PWScore::READ_FAIL;
+//    goto done;
+//  }
+//
+//  SetField(CONTENT, data, flen);
+//
+//  // derive the file's path and name
+//  pws_os::splitpath(fname, sdrive, sdir, sfname, sextn);
+//  spath = pws_os::makepath(sdrive, sdir, _T(""), _T(""));
+//
+//  CItem::SetField(FILENAME, (sfname + sextn).c_str());
+//  CItem::SetField(FILEPATH, spath.c_str());
+//  CItem::SetField(MEDIATYPE, pws_os::GetMediaType(fname.c_str()).c_str());
+//
+//  if (pws_os::GetFileTimes(fname, ctime, mtime, atime)) {
+//    unsigned char buf[sizeof(time_t)];
+//    putInt(buf, ctime);
+//    CItem::SetField(FILECTIME, buf, sizeof(buf));
+//    putInt(buf, mtime);
+//    CItem::SetField(FILEMTIME, buf, sizeof(buf));
+//    putInt(buf, atime);
+//    CItem::SetField(FILEATIME, buf, sizeof(buf));
+//  } else {
+//    ASSERT(0);
+//    goto done;
+//  }
+//
+// done:
+//  trashMemory(data, flen);
+//  delete[] data;
+//  return status;
+//}
+//
+//int CItemAtt::Export(const stringT &fname) const
+//{
+//  int status = PWScore::SUCCESS;
+//
+//  ASSERT(!fname.empty());
+//  ASSERT(IsFieldSet(CONTENT));
+//  // fail safely @runtime:
+//  if (!IsFieldSet(CONTENT))
+//    return PWScore::FAILURE;
+//
+//  const CItemField &field = m_fields.find(CONTENT)->second;
+//  std::FILE *fhandle = pws_os::FOpen(fname, L"wb");
+//  if (!fhandle)
+//    return PWScore::CANT_OPEN_FILE;
+//
+//  size_t flen = field.GetLength() + 8; // Add 8 for block size
+//  unsigned char *value = new unsigned char[flen];
+//  if (value == NULL) {
+//    fclose(fhandle);
+//    return PWScore::FAILURE;
+//  }
+//
+//  CItem::GetField(field, value, flen); // flen adjusted to real value
+//  size_t nwritten = fwrite(value, flen, 1, fhandle);
+//  if (nwritten != 1) {
+//    status = PWScore::WRITE_FAIL;
+//    goto done;
+//  }
+//
+//  if (fclose(fhandle) != 0) {
+//    status = PWScore::WRITE_FAIL;
+//    goto done;
+//  }
+//
+// done:
+//  trashMemory(value, flen);
+//  delete[] value;
+//  return status;
+//}
 
 
 bool CItemAtt::SetField(unsigned char type, const unsigned char *data,
@@ -315,142 +315,142 @@ int CItemAtt::Read(PWSfile *in)
   signed long numread = 0;
   unsigned char type;
 
-  int emergencyExit = 255; // to avoid endless loop.
-  signed long fieldLen; // <= 0 means end of file reached
+ // int emergencyExit = 255; // to avoid endless loop.
+ // signed long fieldLen; // <= 0 means end of file reached
 
-  bool gotIV(false), gotEK(false), gotAK(false); // pre-reqs for content
-  bool gotContent(false), gotHMAC(false); // post-requisites
-  unsigned char IV[TwoFish::BLOCKSIZE] = {0};
-  unsigned char EK[PWSfileV4::KLEN] = {0};
-  unsigned char AK[PWSfileV4::KLEN] = {0};
+ // bool gotIV(false), gotEK(false), gotAK(false); // pre-reqs for content
+ // bool gotContent(false), gotHMAC(false); // post-requisites
+ // unsigned char IV[TwoFish::BLOCKSIZE] = {0};
+ // unsigned char EK[PWSfileV4::KLEN] = {0};
+ // unsigned char AK[PWSfileV4::KLEN] = {0};
 
-  unsigned char *content = NULL;
-  size_t content_len = 0;
-  unsigned char expected_digest[SHA256::HASHLEN] = {0};
+ // unsigned char *content = NULL;
+ // size_t content_len = 0;
+ // unsigned char expected_digest[SHA256::HASHLEN] = {0};
 
-  unsigned char *utf8 = NULL;
-  size_t utf8Len = 0;
+ // unsigned char *utf8 = NULL;
+ // size_t utf8Len = 0;
 
-  Clear();
+ // Clear();
 
-  do {
-    fieldLen = static_cast<signed long>(in->ReadField(type, utf8,
-                                                      utf8Len));
+ // do {
+ //   fieldLen = static_cast<signed long>(in->ReadField(type, utf8,
+ //                                                     utf8Len));
 
-    if (fieldLen > 0) {
-      numread += fieldLen;
-      switch (type) {
-      case ATTIV: {
-        ASSERT(utf8Len == sizeof(IV));
-        ASSERT(!gotIV);
-        if (utf8Len != sizeof(IV) || gotIV)
-          goto exit;
-        gotIV = true;
-        memcpy(IV, utf8, sizeof(IV));
-        emergencyExit--;
-        break;
-      }
-      case ATTEK: {
-        ASSERT(utf8Len == sizeof(EK));
-        ASSERT(!gotEK);
-        if (utf8Len != sizeof(EK) || gotEK)
-          goto exit;
-        gotEK = true;
-        memcpy(EK, utf8, sizeof(EK));
-        emergencyExit--;
-        break;
-      }
-      case ATTAK: {
-        ASSERT(utf8Len == sizeof(AK));
-        ASSERT(!gotAK);
-        if (utf8Len != sizeof(AK) || gotAK)
-          goto exit;
-        gotAK = true;
-        memcpy(AK, utf8, sizeof(AK));
-        emergencyExit--;
-        break;
-      }
-      case CONTENT: {
-        // Yes, we're supposed to be able to handle this
-        // even if IV and EK haven't been read yet.
-        // One step at a time, though...
-        ASSERT(gotIV && gotEK);
-        ASSERT(!gotContent);
+ //   if (fieldLen > 0) {
+ //     numread += fieldLen;
+ //     switch (type) {
+ //     case ATTIV: {
+ //       //ASSERT(utf8Len == sizeof(IV));
+ //       //ASSERT(!gotIV);
+ //       if (utf8Len != sizeof(IV) || gotIV)
+ //         goto exit;
+ //       gotIV = true;
+ //       memcpy(IV, utf8, sizeof(IV));
+ //       emergencyExit--;
+ //       break;
+ //     }
+ //     case ATTEK: {
+ //       //ASSERT(utf8Len == sizeof(EK));
+ //       //ASSERT(!gotEK);
+ //       if (utf8Len != sizeof(EK) || gotEK)
+ //         goto exit;
+ //       gotEK = true;
+ //       memcpy(EK, utf8, sizeof(EK));
+ //       emergencyExit--;
+ //       break;
+ //     }
+ //     case ATTAK: {
+ //       //ASSERT(utf8Len == sizeof(AK));
+ //       //ASSERT(!gotAK);
+ //       if (utf8Len != sizeof(AK) || gotAK)
+ //         goto exit;
+ //       gotAK = true;
+ //       memcpy(AK, utf8, sizeof(AK));
+ //       emergencyExit--;
+ //       break;
+ //     }
+ //     case CONTENT: {
+ //       // Yes, we're supposed to be able to handle this
+ //       // even if IV and EK haven't been read yet.
+ //       // One step at a time, though...
+ //       //ASSERT(gotIV && gotEK);
+ //       //ASSERT(!gotContent);
 
-        ASSERT(utf8Len == sizeof(uint32));
-        if (!gotIV || !gotEK || gotContent || utf8Len != sizeof(uint32))
-          goto exit;
-        content_len = getInt32(utf8);
+ //       //ASSERT(utf8Len == sizeof(uint32));
+ //       if (!gotIV || !gotEK || gotContent || utf8Len != sizeof(uint32))
+ //         goto exit;
+ //       content_len = getInt32(utf8);
 
-        TwoFish fish(EK, sizeof(EK));
-        trashMemory(EK, sizeof(EK));
-        const unsigned int BS = fish.GetBlockSize();
+ //       TwoFish fish(EK, sizeof(EK));
+ //       trashMemory(EK, sizeof(EK));
+ //       const unsigned int BS = fish.GetBlockSize();
 
-        PWSfileV4 *in4 = dynamic_cast<PWSfileV4 *>(in);
-        ASSERT(in4 != NULL);
-        size_t nread = in4->ReadContent(&fish, IV, content, content_len);
-        // nread should be content_len rounded up to nearest BS:
-        ASSERT(nread == (content_len/BS + 1)*BS);
-        if (nread != (content_len/BS + 1)*BS) {
-          status = PWSfile::READ_FAIL;
-          goto exit;
-        }
-        gotContent = true;
-        break;
-      }
-      case CONTENTHMAC: {
-        ASSERT(!gotHMAC);
-        ASSERT(utf8Len == SHA256::HASHLEN);
-        if (gotHMAC || utf8Len != SHA256::HASHLEN)
-          goto exit;
-        gotHMAC = true;
-        memcpy(expected_digest, utf8, SHA256::HASHLEN);
-        break;
-      }
-      default: // "normal" fields
-        if (!SetField(type, utf8, utf8Len))
-          goto exit;
-      } // switch {type)
-    } // if (fieldLen > 0)
+ //       PWSfileV4 *in4 = dynamic_cast<PWSfileV4 *>(in);
+ //       //ASSERT(in4 != NULL);
+ //       size_t nread = in4->ReadContent(&fish, IV, content, content_len);
+ //       // nread should be content_len rounded up to nearest BS:
+ //       //ASSERT(nread == (content_len/BS + 1)*BS);
+ //       if (nread != (content_len/BS + 1)*BS) {
+ //         status = PWSfile::READ_FAIL;
+ //         goto exit;
+ //       }
+ //       gotContent = true;
+ //       break;
+ //     }
+ //     case CONTENTHMAC: {
+ //       //ASSERT(!gotHMAC);
+ //       //ASSERT(utf8Len == SHA256::HASHLEN);
+ //       if (gotHMAC || utf8Len != SHA256::HASHLEN)
+ //         goto exit;
+ //       gotHMAC = true;
+ //       memcpy(expected_digest, utf8, SHA256::HASHLEN);
+ //       break;
+ //     }
+ //     default: // "normal" fields
+ //       if (!SetField(type, utf8, utf8Len))
+ //         goto exit;
+ //     } // switch {type)
+ //   } // if (fieldLen > 0)
 
-    if (utf8 != NULL) {
-      trashMemory(utf8, utf8Len * sizeof(utf8[0]));
-      delete[] utf8; utf8 = NULL; utf8Len = 0;
-    }
-  } while (type != END && fieldLen > 0 && --emergencyExit > 0);
+ //   if (utf8 != NULL) {
+ //     trashMemory(utf8, utf8Len * sizeof(utf8[0]));
+ //     delete[] utf8; utf8 = NULL; utf8Len = 0;
+ //   }
+ // } while (type != END && fieldLen > 0 && --emergencyExit > 0);
 
-  // Post-field read processing:
-  // - Ensure we have all we need
-  // - Check HMAC
-  // - Set Content field
-  // - Clean-up
+ // // Post-field read processing:
+ // // - Ensure we have all we need
+ // // - Check HMAC
+ // // - Set Content field
+ // // - Clean-up
 
-  if (gotContent && gotAK && gotHMAC) {
-    unsigned char calculated_digest[SHA256::HASHLEN] = {0};
-    HMAC<SHA256, SHA256::HASHLEN, SHA256::BLOCKSIZE> hmac;
+ // if (gotContent && gotAK && gotHMAC) {
+ //   unsigned char calculated_digest[SHA256::HASHLEN] = {0};
+ //   HMAC<SHA256, SHA256::HASHLEN, SHA256::BLOCKSIZE> hmac;
 
-    hmac.Init(AK, sizeof(AK));
-    trashMemory(AK, sizeof(AK));
-    
-    // calculate HMAC
-    hmac.Update(content, content_len);
-    hmac.Final(calculated_digest);
+ //   hmac.Init(AK, sizeof(AK));
+ //   trashMemory(AK, sizeof(AK));
+ //   
+ //   // calculate HMAC
+ //   hmac.Update(content, content_len);
+ //   hmac.Final(calculated_digest);
 
-    if (memcmp(expected_digest, calculated_digest,
-               sizeof(calculated_digest)) == 0) {
-      SetField(CONTENT, content, content_len);
-      status = PWSfile::SUCCESS;
-    } else {
-      status = PWSfile::BAD_DIGEST;
-    }
-  } else {
-    status = PWSfile::READ_FAIL;
-  }
+ //   if (memcmp(expected_digest, calculated_digest,
+ //              sizeof(calculated_digest)) == 0) {
+ //     SetField(CONTENT, content, content_len);
+ //     status = PWSfile::SUCCESS;
+ //   } else {
+ //     status = PWSfile::BAD_DIGEST;
+ //   }
+ // } else {
+ //   status = PWSfile::READ_FAIL;
+ // }
 
- exit:
-  trashMemory(content, content_len);
-  delete[] content;
-  delete[] utf8; // if here via goto exit
+ //exit:
+ // trashMemory(content, content_len);
+ // delete[] content;
+ // delete[] utf8; // if here via goto exit
 
   if (numread > 0) {
     return status;
@@ -500,34 +500,34 @@ int CItemAtt::Write(PWSfile *out) const
   int status = PWSfile::SUCCESS;
   uuid_array_t att_uuid;
 
-  ASSERT(HasUUID());
-  GetUUID(att_uuid);
+  //ASSERT(HasUUID());
+  //GetUUID(att_uuid);
 
-  out->WriteField(static_cast<unsigned char>(ATTUUID), att_uuid,
-                  sizeof(uuid_array_t));
+  //out->WriteField(static_cast<unsigned char>(ATTUUID), att_uuid,
+  //                sizeof(uuid_array_t));
 
-  WriteIfSet(ATTTITLE, out, true);
-  WriteIfSet(ATTCTIME, out, false);
-  WriteIfSet(MEDIATYPE, out, true);
-  WriteIfSet(FILENAME, out, true);
-  WriteIfSet(FILEPATH, out, true);
-  WriteIfSet(FILECTIME, out, false);
-  WriteIfSet(FILEMTIME, out, false);
-  WriteIfSet(FILEATIME, out, false);
+  //WriteIfSet(ATTTITLE, out, true);
+  //WriteIfSet(ATTCTIME, out, false);
+  //WriteIfSet(MEDIATYPE, out, true);
+  //WriteIfSet(FILENAME, out, true);
+  //WriteIfSet(FILEPATH, out, true);
+  //WriteIfSet(FILECTIME, out, false);
+  //WriteIfSet(FILEMTIME, out, false);
+  //WriteIfSet(FILEATIME, out, false);
 
-  FieldConstIter fiter = m_fields.find(CONTENT);
-  // XXX TBD - fail if no content, as this is a mandatory field
-  if (fiter != m_fields.end()) {
-    PWSfileV4 *out4 = dynamic_cast<PWSfileV4 *>(out);
-    ASSERT(out4 != NULL);
+  //FieldConstIter fiter = m_fields.find(CONTENT);
+  //// XXX TBD - fail if no content, as this is a mandatory field
+  //if (fiter != m_fields.end()) {
+  //  PWSfileV4 *out4 = dynamic_cast<PWSfileV4 *>(out);
+  //  //ASSERT(out4 != NULL);
 
-    size_t clength = fiter->second.GetLength() + BlowFish::BLOCKSIZE;
-    unsigned char *content = new unsigned char[clength];
-    CItem::GetField(fiter->second, content, clength);
-    out4->WriteContentFields(content, clength);
-    trashMemory(content, clength);
-    delete[] content;
-  }
+  //  size_t clength = fiter->second.GetLength() + BlowFish::BLOCKSIZE;
+  //  unsigned char *content = new unsigned char[clength];
+  //  CItem::GetField(fiter->second, content, clength);
+  //  out4->WriteContentFields(content, clength);
+  //  trashMemory(content, clength);
+  //  delete[] content;
+  //}
 
   if (out->WriteField(END, _T("")) > 0) {
     status = PWSfile::SUCCESS;
@@ -537,71 +537,71 @@ int CItemAtt::Write(PWSfile *out) const
   return status;
 }
 
-bool CItemAtt::Matches(const stringT &stValue, int iObject,
-  int iFunction) const
-{
-  ASSERT(iFunction != 0); // must be positive or negative!
-
-  StringX sx_Object;
-  FieldType ft = static_cast<FieldType>(iObject);
-  switch (ft) {
-    case AT_TITLE:
-    case AT_FILENAME:
-    case AT_FILEPATH:
-    case AT_MEDIATYPE:
-      sx_Object = GetField(ft);
-      break;
-    default:
-      ASSERT(0);
-  }
-
-  const bool bValue = !sx_Object.empty();
-  if (iFunction == PWSMatch::MR_PRESENT || iFunction == PWSMatch::MR_NOTPRESENT) {
-    return PWSMatch::Match(bValue, iFunction);
-  }
-
-  return PWSMatch::Match(stValue.c_str(), sx_Object, iFunction);
-}
-
-bool CItemAtt::Matches(time_t time1, time_t time2, int iObject,
-  int iFunction) const
-{
-  //   Check time values are selected
-  time_t tValue;
-
-  switch (iObject) {
-    case AT_CTIME:
-    case AT_FILECTIME:
-    case AT_FILEMTIME:
-    case AT_FILEATIME:
-      CItem::GetTime(iObject, tValue);
-      break;
-    default:
-      ASSERT(0);
-      return false;
-  }
-
-  const bool bValue = (tValue != time_t(0));
-  if (iFunction == PWSMatch::MR_PRESENT || iFunction == PWSMatch::MR_NOTPRESENT) {
-    return PWSMatch::Match(bValue, iFunction);
-  }
-
-  if (!bValue)  // date empty - always return false for other comparisons
-    return false;
-  else {
-    time_t testtime = time_t(0);
-    if (tValue) {
-      struct tm st;
-      errno_t err;
-      err = localtime_s(&st, &tValue);
-      ASSERT(err == 0);
-      if (!err) {
-        st.tm_hour = 0;
-        st.tm_min = 0;
-        st.tm_sec = 0;
-        testtime = mktime(&st);
-      }
-    }
-    return PWSMatch::Match(time1, time2, testtime, iFunction);
-  }
-}
+//bool CItemAtt::Matches(const stringT &stValue, int iObject,
+//  int iFunction) const
+//{
+//  ASSERT(iFunction != 0); // must be positive or negative!
+//
+//  StringX sx_Object;
+//  FieldType ft = static_cast<FieldType>(iObject);
+//  switch (ft) {
+//    case AT_TITLE:
+//    case AT_FILENAME:
+//    case AT_FILEPATH:
+//    case AT_MEDIATYPE:
+//      sx_Object = GetField(ft);
+//      break;
+//    default:
+//      ASSERT(0);
+//  }
+//
+//  const bool bValue = !sx_Object.empty();
+//  if (iFunction == PWSMatch::MR_PRESENT || iFunction == PWSMatch::MR_NOTPRESENT) {
+//    return PWSMatch::Match(bValue, iFunction);
+//  }
+//
+//  return PWSMatch::Match(stValue.c_str(), sx_Object, iFunction);
+//}
+//
+//bool CItemAtt::Matches(time_t time1, time_t time2, int iObject,
+//  int iFunction) const
+//{
+//  //   Check time values are selected
+//  time_t tValue;
+//
+//  switch (iObject) {
+//    case AT_CTIME:
+//    case AT_FILECTIME:
+//    case AT_FILEMTIME:
+//    case AT_FILEATIME:
+//      CItem::GetTime(iObject, tValue);
+//      break;
+//    default:
+//      ASSERT(0);
+//      return false;
+//  }
+//
+//  const bool bValue = (tValue != time_t(0));
+//  if (iFunction == PWSMatch::MR_PRESENT || iFunction == PWSMatch::MR_NOTPRESENT) {
+//    return PWSMatch::Match(bValue, iFunction);
+//  }
+//
+//  if (!bValue)  // date empty - always return false for other comparisons
+//    return false;
+//  else {
+//    time_t testtime = time_t(0);
+//    if (tValue) {
+//      struct tm st;
+//      errno_t err;
+//      err = localtime_s(&st, &tValue);
+//      ASSERT(err == 0);
+//      if (!err) {
+//        st.tm_hour = 0;
+//        st.tm_min = 0;
+//        st.tm_sec = 0;
+//        testtime = mktime(&st);
+//      }
+//    }
+//    return PWSMatch::Match(time1, time2, testtime, iFunction);
+//  }
+//}

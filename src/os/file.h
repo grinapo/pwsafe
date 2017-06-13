@@ -9,29 +9,25 @@
 #ifndef __FILE_H
 #define __FILE_H
 #include "typedefs.h"
-#include <cstdio>
 #include <vector>
 
-namespace pws_os {
-  extern void AddDrive(stringT &path);
-  extern bool FileExists(const stringT &filename);
-  extern bool FileExists(const stringT &filename, bool &bReadOnly);
-  extern bool RenameFile(const stringT &oldname, const stringT &newname);
-  extern bool CopyAFile(const stringT &from, const stringT &to); // creates dirs as needed!
-  extern bool DeleteAFile(const stringT &filename);
-  extern void FindFiles(const stringT &filter, std::vector<stringT> &res);
-  extern bool LockFile(const stringT &filename, stringT &locker,
-                       HANDLE &lockFileHandle, int &LockCount);
-  extern bool IsLockedFile(const stringT &filename);
-  extern void UnlockFile(const stringT &filename,
-                         HANDLE &lockFileHandle, int &LockCount);
+#include <collection.h>
+#include <pplawait.h>
 
-  extern std::FILE *FOpen(const stringT &filename, const TCHAR *mode);
-  extern ulong64 fileLength(std::FILE *fp);
-  extern bool GetFileTimes(const stringT &filename,
-      time_t &ctime, time_t &mtime, time_t &atime);
-  extern bool SetFileTimes(const stringT &filename,
-      time_t ctime, time_t mtime, time_t atime);
+using namespace concurrency;
+using namespace Platform;
+using namespace Windows::Storage;
+using namespace Windows::Storage::Streams;
+using namespace Windows::Storage::Pickers;
+using namespace Windows::UI::Xaml;
+using namespace Windows::UI::Xaml::Controls;
+using namespace Windows::UI::Xaml::Navigation;
+
+namespace pws_os {
+  extern task<bool> FileExists(const stringT &filename);
+
+  extern task<IRandomAccessStream^> FOpen(const stringT &filename, const TCHAR *mode);
+  extern ulong64 fileLength(IRandomAccessStream^ fp);
   extern const TCHAR PathSeparator; // slash for Unix, backslash for Windows
 }
 #endif /* __FILE_H */

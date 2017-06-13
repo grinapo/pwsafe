@@ -13,13 +13,13 @@
 // Abstract the gory details of reading and writing an encrypted database
 //-----------------------------------------------------------------------------
 
-#include <stdio.h> // for FILE *
+//#include <stdio.h> // for FILE *
 #include <vector>
 
 #include "ItemData.h"
 #include "os/UUID.h"
 #include "UnknownField.h"
-#include "PWSFilters.h"
+//#include "PWSFilters.h"
 #include "StringX.h"
 #include "PWSfileHeader.h"
 #include "Proxy.h"
@@ -96,25 +96,25 @@ public:
     HDR_LAST,                             // Start of unknown fields!
     HDR_END                   = 0xff};    // header field types, per formatV{2,3}.txt
 
-  static PWSfile *MakePWSfile(const StringX &a_filename, const StringX &passkey,
+  static task<PWSfile *> MakePWSfile(const StringX &a_filename, const StringX &passkey,
                               VERSION &version, RWmode mode, int &status, 
                               Asker *pAsker = NULL, Reporter *pReporter = NULL);
 
   static VERSION ReadVersion(const StringX &filename, const StringX &passkey);
-  static int CheckPasskey(const StringX &filename,
+  static task<int> CheckPasskey(const StringX &filename,
                           const StringX &passkey, VERSION &version);
 
   // Following for 'legacy' use of pwsafe as file encryptor/decryptor
-  static bool Encrypt(const stringT &fn, const StringX &passwd, stringT &errmess);
-  static bool Decrypt(const stringT &fn, const StringX &passwd, stringT &errmess);
+  //static bool Encrypt(const stringT &fn, const StringX &passwd, stringT &errmess);
+  //static bool Decrypt(const stringT &fn, const StringX &passwd, stringT &errmess);
 
   virtual ~PWSfile();
 
-  virtual int Open(const StringX &passkey) = 0;
+  virtual task<int> Open(const StringX &passkey) = 0;
   virtual int Close();
 
   virtual int WriteRecord(const CItemData &item) = 0;
-  virtual int ReadRecord(CItemData &item) = 0;
+  virtual task<int> ReadRecord(CItemData &item) = 0;
 
   const PWSfileHeader &GetHeader() const {return m_hdr;}
   void SetHeader(const PWSfileHeader &h) {m_hdr = h;}
@@ -130,11 +130,11 @@ public:
   virtual uint32 GetNHashIters() const {return 0;}
   virtual void SetNHashIters(uint32 ) {}
 
-  void SetFilters(const PWSFilters &MapFilters) {m_MapFilters = MapFilters;}
+  /*void SetFilters(const PWSFilters &MapFilters) {m_MapFilters = MapFilters;}
   const PWSFilters *GetFilters() const {return &m_MapFilters;}
 
   void SetPasswordPolicies(const PSWDPolicyMap &MapPSWDPLC) {m_MapPSWDPLC = MapPSWDPLC;}
-  const PSWDPolicyMap *GetPasswordPolicies() const {return &m_MapPSWDPLC;}
+  const PSWDPolicyMap *GetPasswordPolicies() const {return &m_MapPSWDPLC;}*/
 
   void SetEmptyGroups(const std::vector<StringX> &vEmptyGroups) {m_vEmptyGroups = vEmptyGroups;}
   const std::vector<StringX> *GetEmptyGroups() const {return &m_vEmptyGroups;}
@@ -147,24 +147,24 @@ public:
   size_t WriteField(unsigned char type,
                     const unsigned char *data,
                     size_t length) {return WriteCBC(type, data, length);}
-  size_t ReadField(unsigned char &type,
+  task<size_t> ReadField(unsigned char &type,
                    unsigned char* &data,
-                   size_t &length) {return ReadCBC(type, data, length);}
+                   size_t &length) {return co_await ReadCBC(type, data, length);}
   
 protected:
   PWSfile(const StringX &filename, RWmode mode, VERSION v = UNKNOWN_VERSION);
-  void FOpen(); // calls right variant of m_fd = fopen(m_filename);
+  task<void> FOpen(); // calls right variant of m_fd = fopen(m_filename);
   virtual size_t WriteCBC(unsigned char type, const StringX &data) = 0;
   virtual size_t WriteCBC(unsigned char type, const unsigned char *data,
                           size_t length);
-  virtual size_t ReadCBC(unsigned char &type, unsigned char* &data,
+  virtual task<size_t> ReadCBC(unsigned char &type, unsigned char* &data,
                          size_t &length);
   
   static void HashRandom256(unsigned char *p256); // when we don't want to expose our RNG
 
   const StringX m_filename;
   StringX m_passkey;
-  FILE *m_fd;
+  IRandomAccessStream^ m_fd;
   VERSION m_curversion;
   const RWmode m_rw;
   StringX m_defusername; // for V17 conversion (read) only
@@ -178,8 +178,8 @@ protected:
   // Save unknown header fields on read to put back on write unchanged
   UnknownFieldList m_UHFL;
   int m_nRecordsWithUnknownFields;
-  PWSFilters m_MapFilters;
-  PSWDPolicyMap m_MapPSWDPLC;
+  /*PWSFilters m_MapFilters;
+  PSWDPolicyMap m_MapPSWDPLC;*/
   std::vector<StringX> m_vEmptyGroups;
   ulong64 m_fileLength;
   Asker *m_pAsker;

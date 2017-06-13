@@ -11,10 +11,8 @@
  */
 #include <time.h>
 #include <stdlib.h>
-#include <process.h>
 
 #include "../rand.h"
-#include "../lib.h"
 
 // See the MSDN documentation for RtlGenRandom. We will try to load it
 // and if that fails, use our own random number generator. The function
@@ -24,17 +22,7 @@ static BOOLEAN (APIENTRY *pfnGetRandomData)(void*, ULONG) = NULL;
 
 bool pws_os::InitRandomDataFunction()
 {
-  HMODULE hLib = HMODULE(pws_os::LoadLibrary(_T("ADVAPI32.DLL"), LOAD_LIBRARY_SYS));
-
-  BOOLEAN (APIENTRY *pfnGetRandomDataT)(void*, ULONG) = NULL;
-  if (hLib != NULL) {
-    pfnGetRandomDataT =
-      (BOOLEAN (APIENTRY *)(void*,ULONG))pws_os::GetFunction(hLib, "SystemFunction036");
-    if (pfnGetRandomDataT) {
-      pfnGetRandomData = pfnGetRandomDataT;
-    }
-  }
-  return (hLib != NULL && pfnGetRandomDataT != NULL);
+  return false;
 }
 
 bool pws_os::GetRandomData(void *p, unsigned long len)
@@ -69,8 +57,8 @@ void pws_os::GetRandomSeed(void *p, unsigned &slen)
     tms.tm_sec = st.wSecond;
     t = mktime(&tms);
 
-    pid = _getpid();
-    ticks = GetTickCount();
+    pid = GetCurrentProcessId();
+    ticks = 0; // GetTickCount();
     unsigned char *pc = static_cast<unsigned char *>(p);
     memcpy(pc, &t, sizeof(t));
     memcpy(pc + sizeof(t), &pid, sizeof(pid));

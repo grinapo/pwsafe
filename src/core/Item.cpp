@@ -14,7 +14,7 @@
 #include "PWSrand.h"
 #include "UTF8Conv.h"
 #include "Util.h"
-#include "os/env.h"
+//#include "os/env.h"
 
 #include <vector>
 
@@ -209,14 +209,14 @@ static bool pull_string(StringX &str,
 
   static int cp_acp = -1;
   if (cp_acp == -1) {
-    cp_acp = pws_os::getenv("PWS_CP_ACP", false).empty() ? 0 : 1;
+    cp_acp = /*pws_os::getenv("PWS_CP_ACP", false).empty() ? 0 :*/ 0;
   }
   CUTF8Conv utf8conv(cp_acp != 0);
   std::vector<unsigned char> v(data, (data + len));
   v.push_back(0); // null terminate for FromUTF8.
   bool utf8status = utf8conv.FromUTF8(&v[0], len, str);
   if (!utf8status) {
-    pws_os::Trace(_T("Item.cpp: pull_string(): FromUTF8 failed!\n"));
+    //pws_os::Trace(_T("Item.cpp: pull_string(): FromUTF8 failed!\n"));
   }
   trashMemory(&v[0], len);
   return utf8status;

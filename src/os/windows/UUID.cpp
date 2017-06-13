@@ -17,9 +17,8 @@
 #include "../../core/Util.h" /* for trashMemory() */
 #include "../../core/StringXStream.h"
 #include <iomanip>
-#include <assert.h>
 
-#include <Winsock.h> /* for htonl, htons */
+#include <Winsock2.h> /* for htonl, htons */
 
 using namespace std;
 
@@ -58,7 +57,7 @@ const pws_os::CUUID &pws_os::CUUID::NullUUID()
 pws_os::CUUID::CUUID()
   : m_ua(NULL), m_canonic(false)
 {
-  UuidCreate(&m_uuid);
+  CoCreateGuid(&m_uuid);
 }
 
 pws_os::CUUID::CUUID(const CUUID &uuid)

@@ -17,12 +17,20 @@
 #include "PwsPlatform.h"
 #include "UTF8Conv.h"
 
-#include "../os/debug.h"
+//#include "../os/debug.h"
 #include "../os/typedefs.h"
-#include "../os/mem.h"
+//#include "../os/mem.h"
 
-#include <sstream>
+//#include <sstream>
 #include <stdarg.h>
+
+#include <collection.h>
+#include <pplawait.h>
+
+using namespace concurrency;
+using namespace Platform;
+using namespace Windows::Storage;
+using namespace Windows::Storage::Streams;
 
 // For V1V2 and file encryption, NOT for V3 and later:
 #define SaltLength 20
@@ -49,7 +57,7 @@ extern void GenRandhash(const StringX &passkey,
                         unsigned char *m_randhash);
 
 // buffer is allocated by _readcbc, *** delete[] is responsibility of caller ***
-extern size_t _readcbc(FILE *fp, unsigned char * &buffer,
+extern task<size_t> _readcbc(IRandomAccessStream^ fp, unsigned char * &buffer,
                        size_t &buffer_len,
                        unsigned char &type, Fish *Algorithm,
                        unsigned char *cbcbuffer,
@@ -57,17 +65,17 @@ extern size_t _readcbc(FILE *fp, unsigned char * &buffer,
                        ulong64 file_len = 0);
 
 // typeless version for V4 content (caller pre-allocates buffer)
-extern size_t _readcbc(FILE *fp, unsigned char *buffer,
+extern task<size_t> _readcbc(IRandomAccessStream^ fp, unsigned char *buffer,
                        const size_t buffer_len, Fish *Algorithm,
                        unsigned char *cbcbuffer);
 
 // _writecbc will throw(EIO) iff a write fail occurs!
-extern size_t _writecbc(FILE *fp, const unsigned char *buffer, size_t length,
+extern size_t _writecbc(IRandomAccessStream^ fp, const unsigned char *buffer, size_t length,
                         unsigned char type, Fish *Algorithm,
                         unsigned char *cbcbuffer);
 
 // typeless version for V4 content:
-extern size_t _writecbc(FILE *fp, const unsigned char *buffer, size_t length,
+extern size_t _writecbc(IRandomAccessStream^ fp, const unsigned char *buffer, size_t length,
                         Fish *Algorithm, unsigned char *cbcbuffer);
 
 
@@ -94,7 +102,7 @@ inline int32 getInt32(const unsigned char buf[4])
 #if defined(_DEBUG)
   if ( *reinterpret_cast<const int32 *>(buf) != (buf[0] | (buf[1] << 8) | (buf[2] << 16) | (buf[3] << 24)) )
   {
-    pws_os::Trace0(_T("Warning: PWS_LITTLE_ENDIAN defined but architecture is big endian\n"));
+    //pws_os::Trace0(_T("Warning: PWS_LITTLE_ENDIAN defined but architecture is big endian\n"));
   }
 #endif
   return *reinterpret_cast<const int32 *>(buf);
@@ -147,7 +155,7 @@ inline void putInt32(unsigned char buf[4], const int32 val )
 #if defined(_DEBUG)
   if ( *reinterpret_cast<int32*>(buf) != (buf[0] | (buf[1] << 8) | (buf[2] << 16) | (buf[3] << 24)) )
   {
-    pws_os::Trace0(_T("Warning: PWS_LITTLE_ENDIAN defined but architecture is big endian\n"));
+    //pws_os::Trace0(_T("Warning: PWS_LITTLE_ENDIAN defined but architecture is big endian\n"));
   }
 #endif
 #elif defined(PWS_BIG_ENDIAN)
@@ -237,27 +245,27 @@ namespace PWSUtil {
 
   // For Windows implementation, hide Unicode abstraction,
   // and use secure versions (_s) when available
-  void strCopy(LPTSTR target, size_t tcount, const LPCTSTR source, size_t scount);
-  size_t strLength(const LPCTSTR str);
+  //void strCopy(LPTSTR target, size_t tcount, const LPCTSTR source, size_t scount);
+  //size_t strLength(const LPCTSTR str);
   // Time conversion result formats:
   enum TMC {TMC_ASC_UNKNOWN, TMC_ASC_NULL, TMC_EXPORT_IMPORT, TMC_XML,
             TMC_LOCALE, TMC_LOCALE_DATE_ONLY};
   StringX ConvertToDateTimeString(const time_t &t, TMC result_format);
-  stringT GetNewFileName(const stringT &oldfilename, const stringT &newExtn);
+  //stringT GetNewFileName(const stringT &oldfilename, const stringT &newExtn);
   extern const TCHAR *UNKNOWN_ASC_TIME_STR, *UNKNOWN_XML_TIME_STR;
-  void GetTimeStamp(stringT &sTimeStamp, const bool bShort = false);
-  stringT GetTimeStamp(const bool bShort = false);
-  stringT Base64Encode(const BYTE *inData, size_t len);
-  void Base64Decode(const StringX &inString, BYTE* &outData, size_t &out_len);
-  StringX NormalizeTTT(const StringX &in, size_t maxlen = 64);
-  bool WriteXMLField(std::ostream &os, const char *fname,
-                     const StringX &value, CUTF8Conv &utf8conv,
-                     const char *tabs = "\t\t");
-  std::string GetXMLTime(int indent, const char *name,
-                         time_t t, CUTF8Conv &utf8conv);
+  //void GetTimeStamp(stringT &sTimeStamp, const bool bShort = false);
+  //stringT GetTimeStamp(const bool bShort = false);
+  //stringT Base64Encode(const BYTE *inData, size_t len);
+  //void Base64Decode(const StringX &inString, BYTE* &outData, size_t &out_len);
+  //StringX NormalizeTTT(const StringX &in, size_t maxlen = 64);
+  //bool WriteXMLField(std::ostream &os, const char *fname,
+  //                   const StringX &value, CUTF8Conv &utf8conv,
+  //                   const char *tabs = "\t\t");
+  //std::string GetXMLTime(int indent, const char *name,
+  //                       time_t t, CUTF8Conv &utf8conv);
 
-  StringX DeDupString(StringX &in_string);
-  stringT GetSafeXMLString(const StringX &sxInString);
+  //StringX DeDupString(StringX &in_string);
+  //stringT GetSafeXMLString(const StringX &sxInString);
 
   bool pull_time(time_t &t, const unsigned char *data, size_t len);
 }

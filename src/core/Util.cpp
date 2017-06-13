@@ -14,24 +14,24 @@
 #include "PwsPlatform.h"
 #include "core.h"
 #include "StringXStream.h"
-#include "PWPolicy.h"
+//#include "PWPolicy.h"
 
 #include "Util.h"
 
-#include "os/debug.h"
-#include "os/pws_tchar.h"
-#include "os/dir.h"
+//#include "os/debug.h"
+//#include "os/pws_tchar.h"
+//#include "os/dir.h"
 
-#include <stdio.h>
-#ifdef _WIN32
-#include <sys/timeb.h>
-#else
-#include <sys/time.h>
-#endif
-#include <sstream>
-#include <iomanip>
+//#include <stdio.h>
+//#ifdef _WIN32
+//#include <sys/timeb.h>
+//#else
+//#include <sys/time.h>
+//#endif
+//#include <sstream>
+//#include <iomanip>
 
-#include <errno.h>
+//#include <errno.h>
 
 using namespace std;
 
@@ -49,9 +49,6 @@ static void xormem(unsigned char *mem1, const unsigned char *mem2, int length)
 // see http://www.cs.auckland.ac.nz/~pgut001/pubs/secure_del.html
 // and http://www.cypherpunks.to/~peter/usenix01.pdf
 
-#ifdef _WIN32
-#pragma optimize("",off)
-#endif
 void trashMemory(void *buffer, size_t length)
 {
   ASSERT(buffer != NULL);
@@ -68,9 +65,6 @@ void trashMemory(void *buffer, size_t length)
 #endif
   }
 }
-#ifdef _WIN32
-#pragma optimize("",on)
-#endif
 void trashMemory(LPTSTR buffer, size_t length)
 {
   trashMemory(reinterpret_cast<unsigned char *>(buffer), length * sizeof(buffer[0]));
@@ -156,7 +150,7 @@ void GenRandhash(const StringX &a_passkey,
   keyHash.Final(a_randhash);
 }
 
-size_t _writecbc(FILE *fp, const unsigned char *buffer, size_t length, unsigned char type,
+size_t _writecbc(IRandomAccessStream^ fp, const unsigned char *buffer, size_t length, unsigned char type,
                  Fish *Algorithm, unsigned char *cbcbuffer)
 {
   const unsigned int BS = Algorithm->GetBlockSize();
@@ -193,7 +187,7 @@ size_t _writecbc(FILE *fp, const unsigned char *buffer, size_t length, unsigned 
   Algorithm->Encrypt(curblock, curblock);
   memcpy(cbcbuffer, curblock, BS); // update CBC for next round
 
-  numWritten = fwrite(curblock, 1, BS, fp);
+  //numWritten = fwrite(curblock, 1, BS, fp);
   if (numWritten != BS) {
     trashMemory(curblock, BS);
     throw(EIO);
@@ -205,7 +199,7 @@ size_t _writecbc(FILE *fp, const unsigned char *buffer, size_t length, unsigned 
   return numWritten;
 }
 
-size_t _writecbc(FILE *fp, const unsigned char *buffer, size_t length,
+size_t _writecbc(IRandomAccessStream^ fp, const unsigned char *buffer, size_t length,
                  Fish *Algorithm, unsigned char *cbcbuffer)
 {
   // Doesn't write out length, just CBC's the data, padding with randomness
@@ -243,7 +237,7 @@ size_t _writecbc(FILE *fp, const unsigned char *buffer, size_t length,
       xormem(curblock, cbcbuffer, BS);
       Algorithm->Encrypt(curblock, curblock);
       memcpy(cbcbuffer, curblock, BS);
-      size_t nw =  fwrite(curblock, 1, BS, fp);
+	  size_t nw = 0;// fwrite(curblock, 1, BS, fp);
       if (nw != BS) {
         trashMemory(curblock, BS);
         throw(EIO);
@@ -271,7 +265,7 @@ size_t _writecbc(FILE *fp, const unsigned char *buffer, size_t length,
 * If TERMINAL_BLOCK is non-NULL, the first block read is tested against it,
 * and -1 is returned if it matches. (used in V3)
 */
-size_t _readcbc(FILE *fp,
+task<size_t> _readcbc(IRandomAccessStream^ fp,
          unsigned char* &buffer, size_t &buffer_len, unsigned char &type,
          Fish *Algorithm, unsigned char *cbcbuffer,
          const unsigned char *TERMINAL_BLOCK, ulong64 file_len)
@@ -295,7 +289,13 @@ size_t _readcbc(FILE *fp,
   lengthblock = block1;
 
   buffer_len = 0;
-  numRead = fread(lengthblock, 1, BS, fp);
+  Array<unsigned char>^ lblock = ref new Array<unsigned char>(BS);
+  DataReader^ dataReader = ref new DataReader(fp);
+  co_await dataReader->LoadAsync(fp->Size);
+  dataReader->ReadBytes(lblock);
+  for (int i = 0; i < lblock->Length; i++) lengthblock[i] = lblock[i];
+  numRead = BS;
+  //numRead = fread(lengthblock, 1, BS, fp);
   if (numRead != BS) {
     return 0;
   }
@@ -317,7 +317,7 @@ size_t _readcbc(FILE *fp,
   type = lengthblock[sizeof(int32)]; // type is first byte after the length
 
   if ((file_len != 0 && length >= file_len)) {
-    pws_os::Trace0(_T("_readcbc: Read size larger than file length - aborting\n"));
+    //pws_os::Trace0(_T("_readcbc: Read size larger than file length - aborting\n"));
     buffer = NULL;
     buffer_len = 0;
     trashMemory(lengthblock, BS);
@@ -353,7 +353,11 @@ size_t _readcbc(FILE *fp,
   if (length > 0 ||
       (BS == 8 && length == 0)) { // pre-3 pain
     unsigned char *tempcbc = block3;
-    numRead += fread(b, 1, BlockLength, fp);
+	Array<unsigned char>^ tbl = ref new Array<unsigned char>(BlockLength);
+	dataReader->ReadBytes(tbl);
+	for (int i = 0; i < tbl->Length; i++) b[i] = tbl[i];
+	numRead += BlockLength;
+	//numRead += fread(b, 1, BlockLength, fp);
     for (unsigned int x = 0; x < BlockLength; x += BS) {
       memcpy(tempcbc, b + x, BS);
       Algorithm->Decrypt(b + x, b + x);
@@ -366,11 +370,13 @@ size_t _readcbc(FILE *fp,
     // delete[] buffer here since caller will see zero length
     delete[] buffer;
   }
+
+  dataReader->DetachStream();
   return numRead;
 }
 
 // typeless version for V4 content (caller pre-allocates buffer)
-size_t _readcbc(FILE *fp, unsigned char *buffer,
+task<size_t> _readcbc(IRandomAccessStream^ fp, unsigned char *buffer,
                 const size_t buffer_len, Fish *Algorithm,
                 unsigned char *cbcbuffer)
 {
@@ -381,36 +387,41 @@ size_t _readcbc(FILE *fp, unsigned char *buffer,
   unsigned char *tmpcbc = new unsigned char[BS];
 
   do {
-    size_t nr = fread(p, 1, BS, fp);
-    nread += nr;
-    if (nr != BS)
-      break;
+    Array<unsigned char>^ lblock = ref new Array<unsigned char>(BS);
+	DataReader^ dataReader = ref new DataReader(fp);
+	co_await dataReader->LoadAsync(fp->Size);
+	dataReader->ReadBytes(lblock);
+	dataReader->DetachStream();
+    //size_t nr = fread(p, 1, BS, fp);
+    nread += BS;
+    /*if (nr != BS)
+      break;*/
 
     memcpy(tmpcbc, p, BS);
     Algorithm->Decrypt(p, p);
     xormem(p, cbcbuffer, BS);
     memcpy(cbcbuffer, tmpcbc, BS);
 
-    p += nr;
+    p += BS;
   } while (nread < buffer_len);
 
   delete[] tmpcbc;
   return nread;
 }
 
-// PWSUtil implementations
-
-void PWSUtil::strCopy(LPTSTR target, size_t tcount, const LPCTSTR source, size_t scount)
-{
-  UNREFERENCED_PARAMETER(tcount); //not used in now in non-MSVS wrapped version of _tcsncpy_s
-  _tcsncpy_s(target, tcount, source, scount);
-}
-
-size_t PWSUtil::strLength(const LPCTSTR str)
-{
-  return _tcslen(str);
-}
-
+//// PWSUtil implementations
+//
+//void PWSUtil::strCopy(LPTSTR target, size_t tcount, const LPCTSTR source, size_t scount)
+//{
+//  UNREFERENCED_PARAMETER(tcount); //not used in now in non-MSVS wrapped version of _tcsncpy_s
+//  _tcsncpy_s(target, tcount, source, scount);
+//}
+//
+//size_t PWSUtil::strLength(const LPCTSTR str)
+//{
+//  return _tcslen(str);
+//}
+//
 const TCHAR *PWSUtil::UNKNOWN_XML_TIME_STR = _T("1970-01-01 00:00:00");
 const TCHAR *PWSUtil::UNKNOWN_ASC_TIME_STR = _T("Unknown");
 
@@ -467,261 +478,261 @@ StringX PWSUtil::ConvertToDateTimeString(const time_t &t, TMC result_format)
   return ret;
 }
 
-stringT PWSUtil::GetNewFileName(const stringT &oldfilename,
-                                const stringT &newExtn)
-{
-  stringT inpath(oldfilename);
-  stringT drive, dir, fname, ext;
-  stringT outpath;
-
-  if (pws_os::splitpath(inpath, drive, dir, fname, ext)) {
-    outpath = pws_os::makepath(drive, dir, fname, newExtn);
-  } else
-    ASSERT(0);
-  return outpath;
-}
-
-stringT PWSUtil::GetTimeStamp(const bool bShort)
-{
-  stringT sTimeStamp;
-  GetTimeStamp(sTimeStamp, bShort);
-  return sTimeStamp;
-}
-
-void PWSUtil::GetTimeStamp(stringT &sTimeStamp, const bool bShort)
-{
-  // Now re-entrant
-  // Gets datetime stamp in format YYYY/MM/DD HH:MM:SS.mmm
-  // If bShort == true, don't add milli-seconds
-
-#ifdef _WIN32
-  struct _timeb *ptimebuffer;
-  ptimebuffer = new _timeb;
-  _ftime_s(ptimebuffer);
-  time_t the_time = ptimebuffer->time;
-#else
-  struct timeval *ptimebuffer;
-  ptimebuffer = new timeval;
-  gettimeofday(ptimebuffer, NULL);
-  time_t the_time = ptimebuffer->tv_sec;
-#endif
-  StringX cmys_now = ConvertToDateTimeString(the_time, TMC_EXPORT_IMPORT);
-
-  if (bShort) {
-    sTimeStamp = cmys_now.c_str();
-  } else {
-    ostringstreamT *p_os;
-    p_os = new ostringstreamT;
-    *p_os << cmys_now << TCHAR('.') << setw(3) << setfill(TCHAR('0'))
-          << static_cast<unsigned int>(the_time);
-
-    sTimeStamp = p_os->str();
-    delete p_os;
-  }
-  delete ptimebuffer;
-}
-
-stringT PWSUtil::Base64Encode(const BYTE *strIn, size_t len)
-{
-  stringT cs_Out;
-  static const TCHAR base64ABC[] =
-    _S("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/");
-
-  for (size_t i = 0; i < len; i += 3) {
-    long l = ( static_cast<long>(strIn[i]) << 16 ) |
-               (((i + 1) < len) ? (static_cast<long>(strIn[i + 1]) << 8) : 0) |
-               (((i + 2) < len) ? static_cast<long>(strIn[i + 2]) : 0);
-
-    cs_Out += base64ABC[(l >> 18) & 0x3F];
-    cs_Out += base64ABC[(l >> 12) & 0x3F];
-    if (i + 1 < len) cs_Out += base64ABC[(l >> 6) & 0x3F];
-    if (i + 2 < len) cs_Out += base64ABC[(l ) & 0x3F];
-  }
-
-  switch (len % 3) {
-    case 1:
-      cs_Out += TCHAR('=');
-    case 2:
-      cs_Out += TCHAR('=');
-    default:
-      break;
-  }
-  return cs_Out;
-}
-
-void PWSUtil::Base64Decode(const StringX &inString, BYTE * &outData, size_t &out_len)
-{
-  static const char szCS[]=
-    "=ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-
-  int iDigits[4] = {0,0,0,0};
-
-  size_t st_length = 0;
-  const size_t in_length = inString.length();
-
-  size_t i1, i2, i3;
-  for (i2 = 0; i2 < in_length; i2 += 4) {
-    iDigits[0] = iDigits[1] = iDigits[2] = iDigits[3] = -1;
-
-    for (i1 = 0; i1 < sizeof(szCS) - 1; i1++) {
-      for (i3 = i2; i3 < i2 + 4; i3++) {
-        if (i3 < in_length &&  inString[i3] == szCS[i1])
-          iDigits[i3 - i2] = reinterpret_cast<int &>(i1) - 1;
-      }
-    }
-
-    outData[st_length] = (static_cast<BYTE>(iDigits[0]) << 2);
-
-    if (iDigits[1] >= 0) {
-      outData[st_length] += (static_cast<BYTE>(iDigits[1]) >> 4) & 0x3;
-    }
-
-    st_length++;
-
-    if (iDigits[2] >= 0) {
-      outData[st_length++] = ((static_cast<BYTE>(iDigits[1]) & 0x0f) << 4)
-        | ((static_cast<BYTE>(iDigits[2]) >> 2) & 0x0f);
-    }
-
-    if (iDigits[3] >= 0) {
-      outData[st_length++] = ((static_cast<BYTE>(iDigits[2]) & 0x03) << 6)
-        | (static_cast<BYTE>(iDigits[3]) & 0x3f);
-    }
-  }
-
-  out_len = st_length;
-}
-
-StringX PWSUtil::NormalizeTTT(const StringX &in, size_t maxlen)
-{
-  StringX ttt;
-  if (in.length() >= maxlen) {
-    ttt = in.substr(0, maxlen/2-6) +
-      _T(" ... ") + in.substr(in.length() - maxlen/2);
-  } else {
-    ttt = in;
-  }
-  return ttt;
-}
-
-bool ValidateXMLCharacters(const StringX &value, ostringstream &ostInvalidPositions)
-{
-  // From: http://www.w3.org/TR/REC-xml/#sec-cdata-sect
-  // CDATA Sections
-  // [18]    CDSect   ::=    CDStart CData CDEnd
-  // [19]    CDStart  ::=    '<![CDATA['
-  // [20]    CData    ::=    (Char* - (Char* ']]>' Char*))
-  // [21]    CDEnd    ::=    ']]>'
-
-  // From: http://www.w3.org/TR/REC-xml/#NT-Char
-  //  Char    ::=    #x9 | #xA | #xD | [#x20-#xD7FF] | [#xE000-#xFFFD] |
-  //                 [#x10000-#x10FFFF]
-  // any Unicode character, excluding the surrogate blocks, FFFE, and FFFF.
-
-  // Easy to check low values (0x00-0x1f excluding 3 above) and the 2 special values
-  // Not so easy for the range 0xD800 to 0xDFFF (Unicode only) - could use regex
-  // but expected to be slower than this!
-
-  ostInvalidPositions.str("");
-  bool bInvalidFound(false);
-  for (size_t i = 0; i < value.length(); i++) {
-    TCHAR current = value[i];
-    if (!((current == 0x09) ||
-          (current == 0x0A) ||
-          (current == 0x0D) ||
-          ((current >=    0x20) && (current <=   0xD7FF)) ||
-          ((current >=  0xE000) && (current <=   0xFFFD)) ||
-          ((current >= 0x10000) && (current <= 0x10FFFF)))) {
-      if (bInvalidFound) {
-        // Already 1 position, add a comma
-        ostInvalidPositions << ", ";
-      }
-      bInvalidFound = true;
-      ostInvalidPositions << (i + 1);
-    }
-  }
-  return !bInvalidFound;
-}
-
-bool PWSUtil::WriteXMLField(ostream &os, const char *fname,
-                            const StringX &value, CUTF8Conv &utf8conv,
-                            const char *tabs)
-{
-  const unsigned char *utf8 = NULL;
-  size_t utf8Len = 0;
-  ostringstream ostInvalidPositions;
-  if (!ValidateXMLCharacters(value, ostInvalidPositions)) {
-    os << tabs << "<!-- Field '<" << fname << ">' contains invalid XML character(s)" << endl;
-    os << tabs << "   at position(s): " << ostInvalidPositions.str().c_str() << endl;
-    os << tabs << "   and has been skipped -->" << endl;
-    return false;
-  }
-
-  StringX::size_type p = value.find(_T("]]>")); // special handling required
-  if (p == StringX::npos) {
-    // common case
-    os << tabs << "<" << fname << "><![CDATA[";
-    if (utf8conv.ToUTF8(value, utf8, utf8Len))
-      os.write(reinterpret_cast<const char *>(utf8), utf8Len);
-    else
-      os << "Internal error - unable to convert field to utf-8";
-    os << "]]></" << fname << ">" << endl;
-  } else {
-    // value has "]]>" sequence(s) that need(s) to be escaped
-    // Each "]]>" splits the field into two CDATA sections, one ending with
-    // ']]', the other starting with '>'
-    os << tabs << "<" << fname << ">";
-    size_t from = 0, to = p + 2;
-    do {
-      StringX slice = value.substr(from, (to - from));
-      os << "<![CDATA[";
-      if (utf8conv.ToUTF8(slice, utf8, utf8Len))
-        os.write(reinterpret_cast<const char *>(utf8), utf8Len);
-      else
-        os << "Internal error - unable to convert field to utf-8";
-      os << "]]><![CDATA[";
-      from = to;
-      p = value.find(_T("]]>"), from); // are there more?
-      if (p == StringX::npos) {
-        to = value.length();
-        slice = value.substr(from, (to - from));
-      } else {
-        to = p + 2;
-        slice = value.substr(from, (to - from));
-        from = to;
-        to = value.length();
-      }
-      if (utf8conv.ToUTF8(slice, utf8, utf8Len))
-        os.write(reinterpret_cast<const char *>(utf8), utf8Len);
-      else
-        os << "Internal error - unable to convert field to utf-8";
-      os << "]]>";
-    } while (p != StringX::npos);
-    os << "</" << fname << ">" << endl;
-  } // special handling of "]]>" in value.
-  return true;
-}
-
-string PWSUtil::GetXMLTime(int indent, const char *name,
-                           time_t t, CUTF8Conv &utf8conv)
-{
-  int i;
-  const StringX tmp = PWSUtil::ConvertToDateTimeString(t, TMC_XML);
-  ostringstream oss;
-  const unsigned char *utf8 = NULL;
-  size_t utf8Len = 0;
-
-
-  for (i = 0; i < indent; i++) oss << "\t";
-  oss << "<" << name << ">" ;
-  utf8conv.ToUTF8(tmp.substr(0, 10), utf8, utf8Len);
-  oss.write(reinterpret_cast<const char *>(utf8), utf8Len);
-  oss << "T";
-  utf8conv.ToUTF8(tmp.substr(tmp.length() - 8), utf8, utf8Len);
-  oss.write(reinterpret_cast<const char *>(utf8), utf8Len);
-  oss << "</" << name << ">" << endl;
-  return oss.str();
-}
+//stringT PWSUtil::GetNewFileName(const stringT &oldfilename,
+//                                const stringT &newExtn)
+//{
+//  stringT inpath(oldfilename);
+//  stringT drive, dir, fname, ext;
+//  stringT outpath;
+//
+//  if (pws_os::splitpath(inpath, drive, dir, fname, ext)) {
+//    outpath = pws_os::makepath(drive, dir, fname, newExtn);
+//  } else
+//    ASSERT(0);
+//  return outpath;
+//}
+//
+//stringT PWSUtil::GetTimeStamp(const bool bShort)
+//{
+//  stringT sTimeStamp;
+//  GetTimeStamp(sTimeStamp, bShort);
+//  return sTimeStamp;
+//}
+//
+//void PWSUtil::GetTimeStamp(stringT &sTimeStamp, const bool bShort)
+//{
+//  // Now re-entrant
+//  // Gets datetime stamp in format YYYY/MM/DD HH:MM:SS.mmm
+//  // If bShort == true, don't add milli-seconds
+//
+//#ifdef _WIN32
+//  struct _timeb *ptimebuffer;
+//  ptimebuffer = new _timeb;
+//  _ftime_s(ptimebuffer);
+//  time_t the_time = ptimebuffer->time;
+//#else
+//  struct timeval *ptimebuffer;
+//  ptimebuffer = new timeval;
+//  gettimeofday(ptimebuffer, NULL);
+//  time_t the_time = ptimebuffer->tv_sec;
+//#endif
+//  StringX cmys_now = ConvertToDateTimeString(the_time, TMC_EXPORT_IMPORT);
+//
+//  if (bShort) {
+//    sTimeStamp = cmys_now.c_str();
+//  } else {
+//    ostringstreamT *p_os;
+//    p_os = new ostringstreamT;
+//    *p_os << cmys_now << TCHAR('.') << setw(3) << setfill(TCHAR('0'))
+//          << static_cast<unsigned int>(the_time);
+//
+//    sTimeStamp = p_os->str();
+//    delete p_os;
+//  }
+//  delete ptimebuffer;
+//}
+//
+//stringT PWSUtil::Base64Encode(const BYTE *strIn, size_t len)
+//{
+//  stringT cs_Out;
+//  static const TCHAR base64ABC[] =
+//    _S("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/");
+//
+//  for (size_t i = 0; i < len; i += 3) {
+//    long l = ( static_cast<long>(strIn[i]) << 16 ) |
+//               (((i + 1) < len) ? (static_cast<long>(strIn[i + 1]) << 8) : 0) |
+//               (((i + 2) < len) ? static_cast<long>(strIn[i + 2]) : 0);
+//
+//    cs_Out += base64ABC[(l >> 18) & 0x3F];
+//    cs_Out += base64ABC[(l >> 12) & 0x3F];
+//    if (i + 1 < len) cs_Out += base64ABC[(l >> 6) & 0x3F];
+//    if (i + 2 < len) cs_Out += base64ABC[(l ) & 0x3F];
+//  }
+//
+//  switch (len % 3) {
+//    case 1:
+//      cs_Out += TCHAR('=');
+//    case 2:
+//      cs_Out += TCHAR('=');
+//    default:
+//      break;
+//  }
+//  return cs_Out;
+//}
+//
+//void PWSUtil::Base64Decode(const StringX &inString, BYTE * &outData, size_t &out_len)
+//{
+//  static const char szCS[]=
+//    "=ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+//
+//  int iDigits[4] = {0,0,0,0};
+//
+//  size_t st_length = 0;
+//  const size_t in_length = inString.length();
+//
+//  size_t i1, i2, i3;
+//  for (i2 = 0; i2 < in_length; i2 += 4) {
+//    iDigits[0] = iDigits[1] = iDigits[2] = iDigits[3] = -1;
+//
+//    for (i1 = 0; i1 < sizeof(szCS) - 1; i1++) {
+//      for (i3 = i2; i3 < i2 + 4; i3++) {
+//        if (i3 < in_length &&  inString[i3] == szCS[i1])
+//          iDigits[i3 - i2] = reinterpret_cast<int &>(i1) - 1;
+//      }
+//    }
+//
+//    outData[st_length] = (static_cast<BYTE>(iDigits[0]) << 2);
+//
+//    if (iDigits[1] >= 0) {
+//      outData[st_length] += (static_cast<BYTE>(iDigits[1]) >> 4) & 0x3;
+//    }
+//
+//    st_length++;
+//
+//    if (iDigits[2] >= 0) {
+//      outData[st_length++] = ((static_cast<BYTE>(iDigits[1]) & 0x0f) << 4)
+//        | ((static_cast<BYTE>(iDigits[2]) >> 2) & 0x0f);
+//    }
+//
+//    if (iDigits[3] >= 0) {
+//      outData[st_length++] = ((static_cast<BYTE>(iDigits[2]) & 0x03) << 6)
+//        | (static_cast<BYTE>(iDigits[3]) & 0x3f);
+//    }
+//  }
+//
+//  out_len = st_length;
+//}
+//
+//StringX PWSUtil::NormalizeTTT(const StringX &in, size_t maxlen)
+//{
+//  StringX ttt;
+//  if (in.length() >= maxlen) {
+//    ttt = in.substr(0, maxlen/2-6) +
+//      _T(" ... ") + in.substr(in.length() - maxlen/2);
+//  } else {
+//    ttt = in;
+//  }
+//  return ttt;
+//}
+//
+//bool ValidateXMLCharacters(const StringX &value, ostringstream &ostInvalidPositions)
+//{
+//  // From: http://www.w3.org/TR/REC-xml/#sec-cdata-sect
+//  // CDATA Sections
+//  // [18]    CDSect   ::=    CDStart CData CDEnd
+//  // [19]    CDStart  ::=    '<![CDATA['
+//  // [20]    CData    ::=    (Char* - (Char* ']]>' Char*))
+//  // [21]    CDEnd    ::=    ']]>'
+//
+//  // From: http://www.w3.org/TR/REC-xml/#NT-Char
+//  //  Char    ::=    #x9 | #xA | #xD | [#x20-#xD7FF] | [#xE000-#xFFFD] |
+//  //                 [#x10000-#x10FFFF]
+//  // any Unicode character, excluding the surrogate blocks, FFFE, and FFFF.
+//
+//  // Easy to check low values (0x00-0x1f excluding 3 above) and the 2 special values
+//  // Not so easy for the range 0xD800 to 0xDFFF (Unicode only) - could use regex
+//  // but expected to be slower than this!
+//
+//  ostInvalidPositions.str("");
+//  bool bInvalidFound(false);
+//  for (size_t i = 0; i < value.length(); i++) {
+//    TCHAR current = value[i];
+//    if (!((current == 0x09) ||
+//          (current == 0x0A) ||
+//          (current == 0x0D) ||
+//          ((current >=    0x20) && (current <=   0xD7FF)) ||
+//          ((current >=  0xE000) && (current <=   0xFFFD)) ||
+//          ((current >= 0x10000) && (current <= 0x10FFFF)))) {
+//      if (bInvalidFound) {
+//        // Already 1 position, add a comma
+//        ostInvalidPositions << ", ";
+//      }
+//      bInvalidFound = true;
+//      ostInvalidPositions << (i + 1);
+//    }
+//  }
+//  return !bInvalidFound;
+//}
+//
+//bool PWSUtil::WriteXMLField(ostream &os, const char *fname,
+//                            const StringX &value, CUTF8Conv &utf8conv,
+//                            const char *tabs)
+//{
+//  const unsigned char *utf8 = NULL;
+//  size_t utf8Len = 0;
+//  ostringstream ostInvalidPositions;
+//  if (!ValidateXMLCharacters(value, ostInvalidPositions)) {
+//    os << tabs << "<!-- Field '<" << fname << ">' contains invalid XML character(s)" << endl;
+//    os << tabs << "   at position(s): " << ostInvalidPositions.str().c_str() << endl;
+//    os << tabs << "   and has been skipped -->" << endl;
+//    return false;
+//  }
+//
+//  StringX::size_type p = value.find(_T("]]>")); // special handling required
+//  if (p == StringX::npos) {
+//    // common case
+//    os << tabs << "<" << fname << "><![CDATA[";
+//    if (utf8conv.ToUTF8(value, utf8, utf8Len))
+//      os.write(reinterpret_cast<const char *>(utf8), utf8Len);
+//    else
+//      os << "Internal error - unable to convert field to utf-8";
+//    os << "]]></" << fname << ">" << endl;
+//  } else {
+//    // value has "]]>" sequence(s) that need(s) to be escaped
+//    // Each "]]>" splits the field into two CDATA sections, one ending with
+//    // ']]', the other starting with '>'
+//    os << tabs << "<" << fname << ">";
+//    size_t from = 0, to = p + 2;
+//    do {
+//      StringX slice = value.substr(from, (to - from));
+//      os << "<![CDATA[";
+//      if (utf8conv.ToUTF8(slice, utf8, utf8Len))
+//        os.write(reinterpret_cast<const char *>(utf8), utf8Len);
+//      else
+//        os << "Internal error - unable to convert field to utf-8";
+//      os << "]]><![CDATA[";
+//      from = to;
+//      p = value.find(_T("]]>"), from); // are there more?
+//      if (p == StringX::npos) {
+//        to = value.length();
+//        slice = value.substr(from, (to - from));
+//      } else {
+//        to = p + 2;
+//        slice = value.substr(from, (to - from));
+//        from = to;
+//        to = value.length();
+//      }
+//      if (utf8conv.ToUTF8(slice, utf8, utf8Len))
+//        os.write(reinterpret_cast<const char *>(utf8), utf8Len);
+//      else
+//        os << "Internal error - unable to convert field to utf-8";
+//      os << "]]>";
+//    } while (p != StringX::npos);
+//    os << "</" << fname << ">" << endl;
+//  } // special handling of "]]>" in value.
+//  return true;
+//}
+//
+//string PWSUtil::GetXMLTime(int indent, const char *name,
+//                           time_t t, CUTF8Conv &utf8conv)
+//{
+//  int i;
+//  const StringX tmp = PWSUtil::ConvertToDateTimeString(t, TMC_XML);
+//  ostringstream oss;
+//  const unsigned char *utf8 = NULL;
+//  size_t utf8Len = 0;
+//
+//
+//  for (i = 0; i < indent; i++) oss << "\t";
+//  oss << "<" << name << ">" ;
+//  utf8conv.ToUTF8(tmp.substr(0, 10), utf8, utf8Len);
+//  oss.write(reinterpret_cast<const char *>(utf8), utf8Len);
+//  oss << "T";
+//  utf8conv.ToUTF8(tmp.substr(tmp.length() - 8), utf8, utf8Len);
+//  oss.write(reinterpret_cast<const char *>(utf8), utf8Len);
+//  oss << "</" << name << ">" << endl;
+//  return oss.str();
+//}
 
 /**
  * Get TCHAR buffer size by format string with parameters
@@ -765,72 +776,72 @@ int GetStringBufSize(const TCHAR *fmt, va_list args)
   return len;
 }
 
-StringX PWSUtil::DeDupString(StringX &in_string)
-{
-  // Size of input string
-  const size_t len = in_string.length();
-
-  // Create output string
-  StringX out_string;
-
-  // It will never be longer than the input string
-  out_string.reserve(len);
-  const charT *c = in_string.c_str();
-
-  // Cycle through characters - only appending if not already there
-  for (size_t i = 0; i < len; i++) {
-    if (out_string.find_first_of(c) == StringX::npos) {
-      out_string.append(c, 1);
-    }
-    c++;
-  }
-  return out_string;
-}
-
-stringT PWSUtil::GetSafeXMLString(const StringX &sxInString)
-{
-  stringT retval(_T(""));
-  ostringstreamT os;
-
-  StringX::size_type p = sxInString.find(_T("]]>")); // special handling required
-  if (p == StringX::npos) {
-    // common case
-    os << "<![CDATA[" << sxInString << "]]>";
-  } else {
-    // value has "]]>" sequence(s) that need(s) to be escaped
-    // Each "]]>" splits the field into two CDATA sections, one ending with
-    // ']]', the other starting with '>'
-    const StringX value = sxInString;
-    size_t from = 0, to = p + 2;
-    do {
-      StringX slice = value.substr(from, (to - from));
-      os << "<![CDATA[" << slice << "]]><![CDATA[";
-      from = to;
-      p = value.find(_T("]]>"), from); // are there more?
-      if (p == StringX::npos) {
-        to = value.length();
-        slice = value.substr(from, (to - from));
-      } else {
-        to = p + 2;
-        slice = value.substr(from, (to - from));
-        from = to;
-        to = value.length();
-      }
-      os <<  slice << "]]>";
-    } while (p != StringX::npos);
-  }
-  retval = os.str().c_str();
-  return retval;
-}
-
-bool operator==(const std::string& str1, const stringT& str2)
-{
-    CUTF8Conv conv;
-    StringX xstr;
-    VERIFY( conv.FromUTF8( reinterpret_cast<const unsigned char*>(str1.data()), str1.size(), xstr) );
-    return stringx2std(xstr) == str2;
-}
-
+//StringX PWSUtil::DeDupString(StringX &in_string)
+//{
+//  // Size of input string
+//  const size_t len = in_string.length();
+//
+//  // Create output string
+//  StringX out_string;
+//
+//  // It will never be longer than the input string
+//  out_string.reserve(len);
+//  const charT *c = in_string.c_str();
+//
+//  // Cycle through characters - only appending if not already there
+//  for (size_t i = 0; i < len; i++) {
+//    if (out_string.find_first_of(c) == StringX::npos) {
+//      out_string.append(c, 1);
+//    }
+//    c++;
+//  }
+//  return out_string;
+//}
+//
+//stringT PWSUtil::GetSafeXMLString(const StringX &sxInString)
+//{
+//  stringT retval(_T(""));
+//  ostringstreamT os;
+//
+//  StringX::size_type p = sxInString.find(_T("]]>")); // special handling required
+//  if (p == StringX::npos) {
+//    // common case
+//    os << "<![CDATA[" << sxInString << "]]>";
+//  } else {
+//    // value has "]]>" sequence(s) that need(s) to be escaped
+//    // Each "]]>" splits the field into two CDATA sections, one ending with
+//    // ']]', the other starting with '>'
+//    const StringX value = sxInString;
+//    size_t from = 0, to = p + 2;
+//    do {
+//      StringX slice = value.substr(from, (to - from));
+//      os << "<![CDATA[" << slice << "]]><![CDATA[";
+//      from = to;
+//      p = value.find(_T("]]>"), from); // are there more?
+//      if (p == StringX::npos) {
+//        to = value.length();
+//        slice = value.substr(from, (to - from));
+//      } else {
+//        to = p + 2;
+//        slice = value.substr(from, (to - from));
+//        from = to;
+//        to = value.length();
+//      }
+//      os <<  slice << "]]>";
+//    } while (p != StringX::npos);
+//  }
+//  retval = os.str().c_str();
+//  return retval;
+//}
+//
+//bool operator==(const std::string& str1, const stringT& str2)
+//{
+//    CUTF8Conv conv;
+//    StringX xstr;
+//    VERIFY( conv.FromUTF8( reinterpret_cast<const unsigned char*>(str1.data()), str1.size(), xstr) );
+//    return stringx2std(xstr) == str2;
+//}
+//
 bool PWSUtil::pull_time(time_t &t, const unsigned char *data, size_t len)
 {
   // len can be either 4, 5 or 8...
