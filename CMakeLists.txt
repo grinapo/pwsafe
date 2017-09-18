@@ -8,6 +8,7 @@ project (passwordsafe CXX C)
 # prerequisites
 include(CheckLibraryExists)
 include(CheckIncludeFile)
+include(CMakeDependentOption)
 
 if (NOT WIN32)
 include(FindUnixCommands)
@@ -79,21 +80,11 @@ endif (pwsafe_REVISION)
 
 # Configurable options:
 option (NO_YUBI "Set ON to disable YubiKey support" OFF)
-option (NO_GTEST "Set ON to disable gtest unit testing" OFF)
+option (NO_UNIT_TEST "Set ON to disable gtest unit testing" OFF)
 if (WIN32)
   option (WX_WINDOWS "Build wxWidget under Windows" OFF)
-  if (WX_WINDOWS)
-    option (XML_XERCESC "Set ON for XML import support with XercesC" ON)
-  else (WX_WINDOWS)
-    option (XML_MSXML "Set ON for XML import support with MSXML" ON)
-    option (XML_XERCESC "Set ON for XML import support with XercesC" OFF)    
-  endif (WX_WINDOWS)
-  if (XML_MSXML AND XML_XERCESC)
-    message (FATAL_ERROR "MSXML and XERCESC are mutually exclusive")
-  endif (XML_MSXML AND XML_XERCESC)
-  if (XML_MSXML AND WX_WINDOWS)
-    message (FATAL_ERROR "MSXML is not supported for wxWidget under Windows")
-  endif (XML_MSXML AND WX_WINDOWS)
+  cmake_dependent_option(XML_XERCESC "Set OFF to disable XML import support" ON "WX_WINDOWS" OFF)
+  cmake_dependent_option(XML_MSXML "Set OFF to disble XML import support" ON "NOT WX_WINDOWS" OFF)
 else (WIN32)
   option (XML_XERCESC "Set OFF to disable XML import support" ON)
 endif (WIN32)
@@ -190,9 +181,9 @@ enable_testing()
 
 # Common configurations
 
-if (NOT NO_GTEST)
+if (NOT NO_UNIT_TEST)
   include_directories (${PROJECT_SOURCE_DIR}/src/googletest/googletest/include)
-endif(NOT NO_GTEST)
+endif(NOT NO_UNIT_TEST)
 include_directories (${PROJECT_SOURCE_DIR}/src/os)
 include_directories (${PROJECT_SOURCE_DIR}/src/core)
 include_directories (${PROJECT_BINARY_DIR})
@@ -280,10 +271,10 @@ endif (WIN32)
 
 add_subdirectory (src/os) # os-specific library
 add_subdirectory (src/core) # core library
-if (NOT NO_GTEST)
+if (NOT NO_UNIT_TEST)
    add_subdirectory (src/googletest) # tests (gtest framework)
    add_subdirectory (src/test) # tests (gtest framework)
-endif(NOT NO_GTEST)
+endif(NOT NO_UNIT_TEST)
 add_subdirectory (help) # online help
 if (WIN32 AND NOT WX_WINDOWS)
   add_subdirectory (src/ui/Windows)

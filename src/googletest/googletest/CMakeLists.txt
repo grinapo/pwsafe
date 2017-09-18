@@ -7,25 +7,25 @@
 
 # BUILD_SHARED_LIBS is a standard CMake variable, but we declare it here to
 # make it prominent in the GUI.
-option(BUILD_SHARED_LIBS "Build shared libraries (DLLs)." OFF)
+# option(BUILD_SHARED_LIBS "Build shared libraries (DLLs)." OFF) -- not needed for pwsafe
 
 # When other libraries are using a shared version of runtime libraries,
 # Google Test also has to use one.
-option(
-  gtest_force_shared_crt
-  "Use shared (DLL) run-time lib even when Google Test is built as static lib."
-  OFF)
+#option(
+#  gtest_force_shared_crt
+#  "Use shared (DLL) run-time lib even when Google Test is built as static lib."
+#  OFF)
 
-option(gtest_build_tests "Build all of gtest's own tests." OFF)
+#option(gtest_build_tests "Build all of gtest's own tests." OFF)
 
-option(gtest_build_samples "Build gtest's sample programs." OFF)
+#option(gtest_build_samples "Build gtest's sample programs." OFF)
 
-option(gtest_disable_pthreads "Disable uses of pthreads in gtest." OFF)
+#option(gtest_disable_pthreads "Disable uses of pthreads in gtest." OFF)
 
-option(
-  gtest_hide_internal_symbols
-  "Build gtest with internal symbols hidden in shared libraries."
-  OFF)
+#option(
+#  gtest_hide_internal_symbols
+#  "Build gtest with internal symbols hidden in shared libraries."
+#  OFF)
 
 # Defines pre_project_set_up_hermetic_build() and set_up_hermetic_build().
 include(cmake/hermetic_build.cmake OPTIONAL)
