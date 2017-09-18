@@ -112,20 +112,8 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
   else (NOT NO_QR)
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DNO_QR")
   endif (NOT NO_QR)
-  if (NOT NO_GTEST)
-    set (GTEST_ROOT "/usr/src/gtest/build"
-      CACHE PATH "The root directory of the gtest install prefix")
-  endif(NOT NO_GTEST)
 else(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
-  if (NOT NO_GTEST)
-    set (GTEST_MSVC_SEARCH "MT")
-    set (GTEST_ROOT ""
-        CACHE PATH "The root directory of the gtest install prefix")
-  endif(NOT NO_GTEST)
 endif(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
-if (NOT NO_GTEST)
-   find_package(GTest REQUIRED)
-endif(NOT NO_GTEST)
 
 if (NOT WIN32 OR WX_WINDOWS)
   if (NOT WIN32)
@@ -203,7 +191,7 @@ enable_testing()
 # Common configurations
 
 if (NOT NO_GTEST)
-  include_directories (${GTEST_INCLUDE_DIRS})
+  include_directories (${PROJECT_SOURCE_DIR}/src/googletest/googletest/include)
 endif(NOT NO_GTEST)
 include_directories (${PROJECT_SOURCE_DIR}/src/os)
 include_directories (${PROJECT_SOURCE_DIR}/src/core)
@@ -293,6 +281,7 @@ endif (WIN32)
 add_subdirectory (src/os) # os-specific library
 add_subdirectory (src/core) # core library
 if (NOT NO_GTEST)
+   add_subdirectory (src/googletest) # tests (gtest framework)
    add_subdirectory (src/test) # tests (gtest framework)
 endif(NOT NO_GTEST)
 add_subdirectory (help) # online help
